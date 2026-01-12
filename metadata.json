@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Yedek son Copy of Deutsch mit Mari Ai",
+  "description": "A professional AI German teacher that helps you progress from A2 to B2 using your own documents, voice interaction, and personalized lessons.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

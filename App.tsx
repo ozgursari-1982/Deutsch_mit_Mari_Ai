@@ -5,8 +5,9 @@ import { Icons } from './constants';
 import DocumentViewer from './components/DocumentViewer';
 import ChatInterface from './components/ChatInterface';
 import AuthPage from './components/AuthPage';
-import TestView from './components/TestView'; // CHANGED: Use TestView instead of DTBTraining
+import TestView from './components/TestView'; 
 import LibraryView from './components/LibraryView';
+import SentenceGame from './components/SentenceGame'; // NEW IMPORT
 import { gemini, decodeAudioData, createPcmBlob, decode } from './services/geminiService';
 import { 
   auth, 
@@ -17,6 +18,7 @@ import {
   updateDocumentMessages,
   urlToBase64,
   logoutUser,
+  ensureUserInLeaderboard, // NEW
   ADMIN_EMAIL 
 } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -77,6 +79,11 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
+      
+      // AUTO ADD TO LEADERBOARD (0 points)
+      if (currentUser) {
+          ensureUserInLeaderboard(currentUser);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -460,7 +467,7 @@ ${textContext.substring(0, 8000)}
         </div>
         
         {/* Only show top controls if NOT in modular/training modes */}
-        {view !== ViewMode.DTB_TRAINING && view !== ViewMode.LIBRARY && (
+        {view !== ViewMode.DTB_TRAINING && view !== ViewMode.LIBRARY && view !== ViewMode.GAME && (
         <div className="flex items-center gap-3">
           {/* Upload Button - ONLY VISIBLE TO ADMIN */}
           {isAdmin && (
@@ -543,6 +550,11 @@ ${textContext.substring(0, 8000)}
            />
         </div>
 
+        {/* GAME VIEW */}
+        <div className={`h-full w-full transition-all duration-700 ease-in-out ${view === ViewMode.GAME ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none absolute inset-0'}`}>
+           <SentenceGame />
+        </div>
+
         {/* SETTINGS VIEW */}
         <div className={`h-full w-full transition-all duration-700 ease-in-out bg-[#F9FBFF] p-6 overflow-y-auto ${view === ViewMode.SETTINGS ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none absolute inset-0'}`}>
           <div className="max-w-md mx-auto space-y-6 pt-10">
@@ -612,8 +624,7 @@ ${textContext.substring(0, 8000)}
           </div>
           <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${view === ViewMode.CHAT ? 'opacity-100' : 'opacity-60'}`}>Lernen</span>
         </button>
-
-        {/* LIBRARY BUTTON */}
+        
         <button onClick={() => setView(ViewMode.LIBRARY)} className={`flex flex-col items-center justify-center gap-1.5 transition-all w-16 h-16 ${view === ViewMode.LIBRARY ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
           <div className={`p-2 rounded-xl transition-all ${view === ViewMode.LIBRARY ? 'bg-indigo-50 shadow-sm' : ''}`}>
             <Icons.Library className="w-6 h-6" />
@@ -621,19 +632,19 @@ ${textContext.substring(0, 8000)}
           <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${view === ViewMode.LIBRARY ? 'opacity-100' : 'opacity-60'}`}>Bibliothek</span>
         </button>
         
-        {/* DTB TRAINING BUTTON */}
+        {/* GAME BUTTON */}
+        <button onClick={() => setView(ViewMode.GAME)} className={`flex flex-col items-center justify-center gap-1.5 transition-all w-16 h-16 ${view === ViewMode.GAME ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+          <div className={`p-2 rounded-xl transition-all ${view === ViewMode.GAME ? 'bg-indigo-50 shadow-sm' : ''}`}>
+            <Icons.GameController className="w-6 h-6" />
+          </div>
+          <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${view === ViewMode.GAME ? 'opacity-100' : 'opacity-60'}`}>Game</span>
+        </button>
+        
         <button onClick={() => setView(ViewMode.DTB_TRAINING)} className={`flex flex-col items-center justify-center gap-1.5 transition-all w-16 h-16 ${view === ViewMode.DTB_TRAINING ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
           <div className={`p-2 rounded-xl transition-all ${view === ViewMode.DTB_TRAINING ? 'bg-indigo-50 shadow-sm' : ''}`}>
             <Icons.GraduationCap className="w-6 h-6" />
           </div>
           <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${view === ViewMode.DTB_TRAINING ? 'opacity-100' : 'opacity-60'}`}>DTB B2</span>
-        </button>
-
-        <button onClick={() => setView(ViewMode.SETTINGS)} className={`flex flex-col items-center justify-center gap-1.5 transition-all w-16 h-16 ${view === ViewMode.SETTINGS ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-          <div className={`p-2 rounded-xl transition-all ${view === ViewMode.SETTINGS ? 'bg-indigo-50 shadow-sm' : ''}`}>
-            <Icons.Settings className="w-6 h-6" />
-          </div>
-          <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${view === ViewMode.SETTINGS ? 'opacity-100' : 'opacity-60'}`}>Einstell.</span>
         </button>
       </nav>
     </div>

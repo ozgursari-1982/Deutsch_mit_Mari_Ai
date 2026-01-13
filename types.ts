@@ -4,7 +4,8 @@ export enum ViewMode {
   CHAT = 'chat',
   SETTINGS = 'settings',
   DTB_TRAINING = 'dtb_training',
-  LIBRARY = 'library'
+  LIBRARY = 'library',
+  GAME = 'game' // NEW
 }
 
 export interface Message {
@@ -128,4 +129,61 @@ export interface DTBSpeakingResult {
   totalScore: number;
   passed: boolean; // >= 36 points (60%)
   generalFeedback: string;
+}
+
+// --- SENTENCE GAME TYPES (NEW) ---
+
+export interface GameQuestion {
+  id?: string;
+  orderIndex: number; // 1, 2, 3... ensures everyone gets same order
+  task: string; // e.g. "Bilde einen Satz im Perfekt!"
+  wordList: string[]; // e.g. ["Ich", "habe", "bin", "gelaufen", "gestern", "Hause"]
+  level: string; // "B2"
+  hint?: string; // NEW: Grammar tip
+}
+
+export interface GameValidationResult {
+  isValid: boolean;
+  scoreChange: number; // +5 or -5
+  feedback: string;
+  correction: string; // Correct example
+}
+
+// --- LEADERBOARD TYPES ---
+export interface LeaderboardEntry {
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  email?: string; // Added for filtering Admin
+  score: number;
+  createdAt: number; // First join timestamp
+  lastUpdated: number;
+}
+
+// --- SENTENCE BUILDER TYPES ---
+
+export interface WordOption {
+  id: string;
+  text: string;
+  role: string;
+  slot?: string;
+  isCorrect?: boolean;
+}
+
+export interface SentenceState {
+  words: WordOption[];
+  isComplete: boolean;
+  modeId: string | null;
+}
+
+export interface GrammarSegment {
+  text: string;
+  role?: string;
+}
+
+export interface GrammarExercise {
+  id?: string;
+  modeId: string;
+  segments: GrammarSegment[];
+  createdAt: number;
 }

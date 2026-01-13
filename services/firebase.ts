@@ -19,13 +19,15 @@ import {
   addDoc, 
   doc, 
   updateDoc,
+  setDoc,
   deleteDoc,
   getDoc, 
   getDocFromServer, 
   getDocs, 
   getDocsFromServer, 
   serverTimestamp,
-  increment
+  increment,
+  writeBatch
 } from "firebase/firestore";
 import { 
   getStorage, 
@@ -34,7 +36,7 @@ import {
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
-import { Session, LessonDocument, Message, DTBExam } from "../types";
+import { Session, LessonDocument, Message, DTBExam, GameQuestion, GrammarExercise, LeaderboardEntry } from "../types";
 
 // CONSTANTS
 export const ADMIN_EMAIL = 'ozgursari1982@gmail.com';
@@ -344,4 +346,150 @@ export const subscribeToExams = (callback: (exams: DTBExam[]) => void) => {
     })) as DTBExam[];
     callback(exams);
   });
+};
+
+// --- LEADERBOARD SERVICES ---
+
+export const ensureUserInLeaderboard = async (user: User) => {
+    if (!user || !user.email) return;
+    
+    // EXCLUDE ADMIN
+    if (user.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim()) return;
+
+    const userRef = doc(db, "leaderboard", user.uid);
+    try {
+        const snap = await getDoc(userRef);
+        if (!snap.exists()) {
+            await setDoc(userRef, {
+                userId: user.uid,
+                displayName: user.displayName || user.email.split('@')[0] || "Schüler",
+                photoURL: user.photoURL || null,
+                email: user.email, // Store email for filtering if needed later
+                score: 0,
+                createdAt: Date.now(),
+                lastUpdated: Date.now()
+            });
+        }
+    } catch (e) {
+        console.error("Error ensuring user in leaderboard:", e);
+    }
+};
+
+export const updateUserLeaderboardScore = async (user: User, scoreChange: number) => {
+  if (!user || !user.email) return;
+  
+  // EXCLUDE ADMIN
+  if (user.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim()) return;
+
+  const userRef = doc(db, "leaderboard", user.uid);
+  
+  await setDoc(userRef, {
+    userId: user.uid,
+    displayName: user.displayName || user.email.split('@')[0] || "Unbekannt",
+    photoURL: user.photoURL || null,
+    email: user.email,
+    score: increment(scoreChange),
+    lastUpdated: Date.now()
+  }, { merge: true });
+
+  // Ensure createdAt exists
+  const snap = await getDoc(userRef);
+  if (snap.exists() && !snap.data().createdAt) {
+      await updateDoc(userRef, { createdAt: Date.now() });
+  }
+};
+
+export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) => void) => {
+  const q = query(collection(db, "leaderboard"));
+  return onSnapshot(q, (snapshot) => {
+    // Filter and Map
+    const entries = snapshot.docs
+        .map(doc => {
+            const data = doc.data();
+            return {
+                userId: doc.id,
+                displayName: data.displayName || "User",
+                photoURL: data.photoURL,
+                email: data.email || "",
+                score: data.score || 0,
+                createdAt: data.createdAt || data.lastUpdated || Date.now(),
+                lastUpdated: data.lastUpdated || Date.now()
+            };
+        })
+        .filter(entry => {
+             // CLIENT SIDE FILTER: Exclude Admin
+             return entry.email.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase().trim();
+        }) as LeaderboardEntry[];
+    
+    // Sort Logic
+    entries.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score;
+        }
+        if (a.createdAt !== b.createdAt) {
+            return a.createdAt - b.createdAt;
+        }
+        return a.displayName.localeCompare(b.displayName);
+    });
+
+    callback(entries);
+  });
+};
+
+// --- GAME SERVICES (NEW) ---
+
+export const subscribeToGameQuestions = (callback: (questions: GameQuestion[]) => void) => {
+  const q = query(collection(db, "game_questions"), orderBy("orderIndex", "asc"));
+  return onSnapshot(q, (snapshot) => {
+    const questions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as GameQuestion[];
+    callback(questions);
+  });
+};
+
+export const addGameQuestionsBatch = async (questions: GameQuestion[]) => {
+  const batch = writeBatch(db);
+  questions.forEach(q => {
+    const docRef = doc(collection(db, "game_questions"));
+    batch.set(docRef, q);
+  });
+  await batch.commit();
+};
+
+export const clearAllGameQuestions = async () => {
+    const q = query(collection(db, "game_questions"));
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+};
+
+// --- GRAMMAR EXERCISE SERVICES ---
+
+export const addGrammarExercise = async (exercise: GrammarExercise) => {
+  const docRef = await addDoc(collection(db, "grammar_exercises"), exercise);
+  return docRef.id;
+};
+
+export const getGrammarExercises = async (modeId: string) => {
+  const q = query(
+    collection(db, "grammar_exercises"),
+    where("modeId", "==", modeId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GrammarExercise[];
+};
+
+export const getAllGrammarExercises = async () => {
+  const q = query(collection(db, "grammar_exercises"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GrammarExercise[];
+};
+
+export const deleteGrammarExercise = async (id: string) => {
+  await deleteDoc(doc(db, "grammar_exercises", id));
 };

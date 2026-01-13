@@ -119,8 +119,13 @@ const TestView: React.FC<Props> = ({ onClose, documents = [] }) => {
           return selectedKeys.includes(key);
       });
       
+      // CRITICAL FIX: Fetch the LONGEST model message, which is the analysis.
+      // Do not fetch the first message, as it is usually a greeting.
       const contextData = relevantDocs.map(d => {
-          const analysis = d.messages.find(m => m.role === 'model')?.text || "";
+          const modelMessages = d.messages.filter(m => m.role === 'model');
+          // Sort by length descending to find the full analysis report
+          const analysis = modelMessages.sort((a, b) => b.text.length - a.text.length)[0]?.text || "Keine Analyse verfügbar.";
+          
           return `DOKUMENT: ${d.displayName} (${d.name})\nTHEMA: ${d.themeId}-${d.subtopicId}\nINHALT:\n${analysis}`;
       }).join('\n\n========================================\n\n');
 

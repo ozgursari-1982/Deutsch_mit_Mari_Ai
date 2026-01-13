@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Modality, Type, Blob } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
-import { LessonDocument, Message, VocabCard, DTBSpeakingResult, DTBGrade } from "../types";
+import { LessonDocument, Message, VocabCard, DTBSpeakingResult, DTBGrade, GameQuestion, GameValidationResult } from "../types";
 
 export function decode(base64: string) {
   const binaryString = atob(base64);
@@ -80,13 +80,16 @@ function calculatePoints(section: '1A'|'1B'|'1C'|'2'|'3'|'global', grade: DTBGra
 export class GeminiService {
   
   // --- MASTER ANALYSIS (ADMIN ONLY) ---
-  // DOWNGRADED TO FLASH-EXP FOR COST/SPEED
+  // *** BEAST MODE ACTIVATED ***
+  // STRICT RULE: DO NOT LOWER THE THINKING BUDGET.
+  // STRICT RULE: DO NOT CHANGE THE MODEL FROM GEMINI-3-PRO-PREVIEW.
+  // COST AND SPEED ARE IRRELEVANT. QUALITY IS PARAMOUNT.
   async analyzeDocumentInitially(currentDoc: LessonDocument) {
     if (!currentDoc?.data) return null;
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp', // CHANGED from 3-pro
+        model: 'gemini-3-pro-preview', 
         contents: [
           { role: 'user', parts: [
             { inlineData: { data: currentDoc.data, mimeType: currentDoc.type } },
@@ -104,7 +107,9 @@ export class GeminiService {
         ],
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.1
+          // CRITICAL: THINKING BUDGET SET TO 28000 TO ENSURE DEEP REASONING.
+          // DO NOT REMOVE.
+          thinkingConfig: { thinkingBudget: 28000 } 
         }
       });
       return response.text;
@@ -199,7 +204,6 @@ export class GeminiService {
   }
 
   // --- EXAM GENERATION (ADMIN ONLY) ---
-  // MODIFIED: ONLY GENERATES SPEAKING SECTION
   async generateDTBExam(contextData: string, topicTitles: string) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -213,11 +217,14 @@ export class GeminiService {
       Erstelle NUR den Teil "Mündliche Prüfung" (Sprechen) für eine DTB B2 Prüfung.
       Ignoriere Lesen, Hören und Schreiben komplett.
       
-      DOCUMENT ANALYSIS RESULTS (Für Kontext):
-      ${contextData.substring(0, 45000)}
+      WICHTIGSTE REGELN (DATEN-INTEGRITÄT & WISSENSSTAND):
+      1. Die Prüfung MUSS auf den unten stehenden "DOCUMENT ANALYSIS RESULTS" basieren.
+      2. WICHTIG: Der Schüler kennt das Thema NICHT vorher. Er hat NUR das Wissen, das explizit in diesen Dokumenten steht.
+      3. ERFINDE KEINE FAKTEN. Stelle keine Fragen zu Details, die nicht im Text stehen.
+      4. Wenn die Analyse von "KFZ-Werkstatt" handelt, müssen alle Aufgaben in einer KFZ-Werkstatt spielen.
       
-      FALLS KEINE DATEN VORHANDEN SIND:
-      - Erfinde realistische Szenarien passend zum Thema "${topicTitles}".
+      DOCUMENT ANALYSIS RESULTS (DEINE EINZIGE QUELLE):
+      ${contextData.substring(0, 50000)}
       
       STRUKTUR (MUSS EXAKT DIESEM JSON FORMAT ENTSPRECHEN):
       {
@@ -230,15 +237,15 @@ export class GeminiService {
             "parts": [
                { 
                  "title": "Teil 1: Über ein Thema sprechen", 
-                 "content": "Wählen Sie eines der folgenden Themen:\n\nTHEMA A: [Erstelle ein komplexes Berufsthema passend zu ${topicTitles} mit 3 Unterpunkten]\n\nTHEMA B: [Alternativthema mit 3 Unterpunkten]\n\nAufgabe: Präsentieren Sie Ihre Meinung, nennen Sie Vor- und Nachteile und berichten Sie von Erfahrungen." 
+                 "content": "Wählen Sie eines der folgenden Themen:\n\nTHEMA A: [Erstelle ein Thema, das DIREKT aus dem Dokumentinhalt stammt]\n\nTHEMA B: [Alternativthema, ebenfalls basierend auf Dokumenten]\n\nAufgabe: Präsentieren Sie Ihre Meinung, nennen Sie Vor- und Nachteile und berichten Sie von Erfahrungen. NUTZE FAKTEN AUS DEM TEXT." 
                },
                { 
                  "title": "Teil 2: Mit Kollegen sprechen", 
-                 "content": "SITUATION: [Erstelle eine realistische Konflikt- oder Planungssituation im Betrieb passend zu ${topicTitles}].\n\nAUFGABE: Diskutieren Sie mit Ihrem Kollegen/Ihrer Kollegin. Finden Sie einen Kompromiss. Schlagen Sie Lösungen vor." 
+                 "content": "SITUATION: [Erstelle eine Situation basierend auf den Dokumenten. Gib dem Schüler alle nötigen Infos im Text].\n\nAUFGABE: Diskutieren Sie mit Ihrem Kollegen/Ihrer Kollegin. Finden Sie einen Kompromiss. Schlagen Sie Lösungen vor." 
                },
                { 
                  "title": "Teil 3: Lösungswege diskutieren", 
-                 "content": "PROBLEM: [Beschreibe ein spezifisches Arbeitsproblem, z.B. Lieferverzögerung, Personalmangel].\n\nAUFGABE: Sie müssen das Problem gemeinsam in 5 Minuten lösen. Analysieren Sie die Situation und entscheiden Sie sich für den besten Weg." 
+                 "content": "PROBLEM: [Ein spezifisches Problem aus dem Dokument-Kontext].\n\nAUFGABE: Sie müssen das Problem gemeinsam in 5 Minuten lösen. Analysieren Sie die Situation und entscheiden Sie sich für den besten Weg." 
                }
             ]
           }
@@ -547,6 +554,122 @@ export class GeminiService {
   async generateDTBSection(topic: string, sectionType: string) {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       return {}; 
+  }
+
+  // --- GAME: QUESTION GENERATION (ADMIN) ---
+  // MODIFIED: Accepts ARRAY of topic strings
+  async generateGameQuestions(topics: string[]): Promise<GameQuestion[]> {
+      try {
+          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          
+          const topicListString = topics.join("\n- ");
+
+          const prompt = `
+          TASK: Create exactly 10 German Sentence Building Puzzles.
+          LEVEL: B1 (Daily life, work basics, travel, family). Use simple vocabulary.
+          
+          DISTRIBUTION:
+          I have provided a list of 5 grammar topics below.
+          You MUST generate exactly 2 puzzles for EACH topic in the list.
+          
+          INPUT TOPICS:
+          - ${topicListString}
+
+          CRITICAL RULE: "WORTSALAT" (WORD SALAD) MODE.
+          Each puzzle must be a challenge of finding the right words in a crowded pool.
+
+          OUTPUT FORMAT (JSON ARRAY):
+          [
+            {
+              "task": "NUR DIE ANWEISUNG (z.B. 'Bilde einen Satz im Perfekt')",
+              "wordList": [ ... array of EXACTLY 25-30 strings ... ],
+              "level": "B1",
+              "hint": "Ein kurzer Grammatik-Tipp (z.B. 'Verb am Ende'). KEINE LÖSUNG VERRATEN."
+            }
+          ]
+
+          REQUIREMENTS FOR 'wordList':
+          1.  MUST contain the ~6-10 words needed for the correct sentence.
+          2.  MUST contain ~15-20 DISTRACTORS (False words).
+              -   Distractors must be tricky:
+                  -   False conjugations (e.g. "gehst" if "ging" is correct)
+                  -   False articles (e.g. "die" if "der" is correct)
+                  -   False prepositions
+              -   Include random nouns related to the topic.
+          3.  Shuffle the list.
+          4.  MUST include punctuation marks as separate strings (e.g. ",", ".", "?", "!") if needed.
+
+          GENERATE EXACTLY 10 QUESTIONS (2 per Topic).
+          `;
+          
+          const response = await ai.models.generateContent({
+              model: 'gemini-3-flash-preview',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' }
+          });
+          
+          const data = JSON.parse(cleanJson(response.text));
+          return data.map((q: any, idx: number) => ({ ...q, orderIndex: idx + 1 }));
+      } catch(e) {
+          console.error("Game Gen Error", e);
+          return [];
+      }
+  }
+
+  // --- GAME: SENTENCE VALIDATION (AI JUDGE) ---
+  async validateGameSentence(task: string, userSentence: string): Promise<GameValidationResult> {
+      try {
+          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const prompt = `
+          ROLLE: Empathischer Deutschlehrer für Schüler mit ADHD.
+          
+          AUFGABE AN DEN SCHÜLER: "${task}"
+          VOM SCHÜLER GEBAUTER SATZ: "${userSentence}"
+          
+          ANALYSE DER LÖSUNG (DETAILLIERT):
+          
+          REGELN FÜR DIE BEWERTUNG (SEHR WICHTIG - MOTIVATION):
+          
+          1. **INTERPUNKTION (Komma/Punkt/Fragezeichen):**
+             - FEHLT? -> Der Satz gilt trotzdem als **RICHTIG (isValid: true)**.
+             - PUNKTABZUG? -> NEIN. (+5 Punkte).
+             - FEEDBACK: Loben, aber freundlich darauf hinweisen (z.B. "Super Satz! Ein kleines Komma vor 'dass' würde ihn perfekt machen.").
+             
+          2. **ARTIKEL (Der/Die/Das):**
+             - FALSCH? (z.B. "Der Auto" statt "Das Auto") -> Der Satz gilt trotzdem als **RICHTIG (isValid: true)**.
+             - PUNKTABZUG? -> NEIN. (+5 Punkte).
+             - FEEDBACK: Loben, aber den richtigen Artikel nennen (z.B. "Klasse Struktur! Kleiner Tipp: Es heißt 'das Auto'.").
+             
+          3. **GRAMMATIK / SATZBAU / KONJUGATION (Ernsthafte Fehler):**
+             - FALSCH? (z.B. Verb an falscher Stelle, falsche Zeitform) -> Der Satz ist **FALSCH (isValid: false)**.
+             - PUNKTABZUG? -> JA (-5 Punkte).
+             - FEEDBACK: Detaillierte Analyse auf Deutsch. Erkläre die Grammatik, warum die Positionen stimmen oder nicht. Gehe auf Details ein (z.B. "Im Nebensatz muss das konjugierte Verb ans Ende.").
+          
+          ANTWORTE NUR JSON:
+          {
+             "isValid": boolean, // true bei Perfekt, Interpunktionsfehler oder Artikelfehler. false bei Grammatikfehler.
+             "scoreChange": number, // +5 bei isValid:true, -5 bei isValid:false
+             "feedback": "Dein detailliertes und lehrreiches Feedback auf Deutsch.",
+             "correction": "Ein perfektes Beispiel, wie der Satz lauten sollte (nur falls isValid:false, sonst leer)."
+          }
+          `;
+          
+          const response = await ai.models.generateContent({
+              model: 'gemini-2.0-flash-exp',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' }
+          });
+          
+          return JSON.parse(cleanJson(response.text));
+      } catch(e) {
+          console.error("Validation Error", e);
+          return {
+              isValid: false,
+              scoreChange: 0,
+              feedback: "Technischer Fehler bei der Auswertung.",
+              correction: ""
+          };
+      }
   }
 }
 

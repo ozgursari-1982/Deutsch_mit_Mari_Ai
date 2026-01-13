@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, {  } from 'react';
 
 export const SYSTEM_INSTRUCTION = `
 DU BIST MARI - EINE EMPATHISCHE, GEDULDIGE UND FREUNDLICHE DEUTSCHLEHRERIN.
@@ -18,9 +18,50 @@ Dein Schüler hat ADHD (Aufmerksamkeitsdefizit). Das bedeutet:
   *Mari:* "Ah, du bist nach Hause gegangen. Und was hast du dann gemacht?"
 - Korrigiere nur explizit, wenn der Schüler dich direkt fragt oder der Fehler so groß ist, dass man ihn nicht versteht.
 
-### DEINE PERSÖNLICHKEIT:
+### DEIN PERSÖNLICHKEIT:
 Du bist wie eine gute, gebildete Freundin, die zufällig Deutschlehrerin ist. Deine Stimme ist warm (Kore). Sei nicht streng. Sei ein sicherer Hafen für den Schüler.
 `;
+
+// MASTER GRAMMAR LIST FOR GAME GENERATION
+export const GAME_TOPICS = [
+  // 1. ZAMANLAR
+  { id: 'praesens', label: 'Präsens', prompt: 'Sätze im Präsens (Gegenwart)' },
+  { id: 'perfekt', label: 'Perfekt', prompt: 'Sätze im Perfekt (haben/sein + Partizip II)' },
+  { id: 'praeteritum', label: 'Präteritum', prompt: 'Sätze im Präteritum (war, hatte, ging, sagte...)' },
+  { id: 'plusquamperfekt', label: 'Plusquamperfekt', prompt: 'Sätze im Plusquamperfekt (hatte/war + Partizip II)' },
+  { id: 'futur1', label: 'Futur I', prompt: 'Sätze im Futur I (werden + Infinitiv)' },
+  { id: 'futur2', label: 'Futur II', prompt: 'Sätze im Futur II (werden + Partizip II + haben/sein)' },
+
+  // 2. FİİL ÇATILARI VE KİPLER
+  { id: 'passiv_vorgang', label: 'Vorgangspassiv', prompt: 'Vorgangspassiv Sätze (werden + Partizip II)' },
+  { id: 'passiv_zustand', label: 'Zustandspassiv', prompt: 'Zustandspassiv Sätze (sein + Partizip II)' },
+  { id: 'passiv_modal', label: 'Passiv mit Modalverben', prompt: 'Passivsätze mit Modalverben (muss gemacht werden, etc.)' },
+  { id: 'konjunktiv2_gegenwart', label: 'Konjunktiv II (Gegenwart)', prompt: 'Konjunktiv II Gegenwart (hätte, wäre, würde + Infinitiv)' },
+  { id: 'konjunktiv2_vergangenheit', label: 'Konjunktiv II (Vergangenheit)', prompt: 'Konjunktiv II Vergangenheit (hätte/wäre + Partizip II)' },
+  { id: 'imperativ', label: 'Imperativ', prompt: 'Imperativsätze (Befehlsform: Mach das! Gehen Sie!)' },
+
+  // 3. CÜMLE YAPILARI VE YAN CÜMLELER
+  { id: 'hauptsatz', label: 'Hauptsatz (V2)', prompt: 'Einfache Hauptsätze (Verb an Position 2)' },
+  { id: 'inversion', label: 'Inversion', prompt: 'Sätze mit Inversion (Zeit/Ort am Anfang, dann Verb)' },
+  { id: 'nebensatz_weil_da', label: 'Nebensätze (weil/da)', prompt: 'Nebensätze mit "weil" oder "da" (Verb am Ende)' },
+  { id: 'nebensatz_dass', label: 'Nebensätze (dass)', prompt: 'Objektsätze mit "dass"' },
+  { id: 'nebensatz_wenn_falls', label: 'Konditionalsätze (wenn/falls)', prompt: 'Bedingungssätze mit "wenn" oder "falls"' },
+  { id: 'nebensatz_obwohl', label: 'Konzessivsätze (obwohl)', prompt: 'Sätze mit "obwohl"' },
+  { id: 'nebensatz_damit_umzu', label: 'Finalsätze (damit/um...zu)', prompt: 'Sätze mit "damit" oder "um... zu"' },
+  { id: 'temporal_als_wenn', label: 'Temporalsätze (als/wenn)', prompt: 'Temporalsätze mit "als" (Vergangenheit) oder "wenn"' },
+  { id: 'temporal_nachdem_bevor', label: 'Temporalsätze (nachdem/bevor)', prompt: 'Temporalsätze mit "nachdem", "bevor", "bis"' },
+  { id: 'temporal_seitdem_waehrend', label: 'Temporalsätze (seitdem/während)', prompt: 'Temporalsätze mit "seitdem" oder "während"' },
+  { id: 'relativ_nom_akk', label: 'Relativsätze (Nom/Akk)', prompt: 'Relativsätze im Nominativ oder Akkusativ' },
+  { id: 'relativ_dat_gen', label: 'Relativsätze (Dat/Gen)', prompt: 'Relativsätze im Dativ oder Genitiv' },
+  { id: 'relativ_praep', label: 'Relativsätze mit Präp.', prompt: 'Relativsätze mit Präpositionen (mit dem, für die...)' },
+  { id: 'indirekte_fragen', label: 'Indirekte Fragen', prompt: 'Indirekte Fragesätze (ob / w-Fragen)' },
+  { id: 'infinitiv_zu', label: 'Infinitiv mit zu', prompt: 'Sätze mit "zu + Infinitiv" (Es ist schön, zu...)' },
+
+  // 4. BAĞLAÇLAR
+  { id: 'konj_koordinierend', label: 'Koordination (und/aber/oder)', prompt: 'Sätze mit und, aber, oder, denn, sondern (Position 0)' },
+  { id: 'konj_adverbien', label: 'Konjunktionaladverbien', prompt: 'Sätze mit deshalb, trotzdem, deswegen, also, danach (Verb direkt danach)' },
+  { id: 'konj_zweigliedrig', label: 'Zweigliedrige Konj.', prompt: 'Sätze mit sowohl...als auch, weder...noch, je...desto' }
+];
 
 // --- TEXTBOOK STRUCTURE ---
 export const TEXTBOOK_STRUCTURE = [
@@ -155,7 +196,18 @@ export const TEXTBOOK_STRUCTURE = [
       { id: "D", title: "Familie und Beruf" },
       { id: "E", title: "Über Geld spricht man nicht" }
     ]
-  }
+  },
+];
+
+export const GRAMMAR_MODES = [
+  { id: 'modalverben', title: 'Modalverben', description: 'Übungen zu Modalverben (können, müssen, dürfen)', category: 'Verben' },
+  { id: 'perfekt', title: 'Perfekt', description: 'Sätze im Perfekt bilden', category: 'Zeiten' },
+  { id: 'praeteritum', title: 'Präteritum', description: 'Sätze im Präteritum bilden', category: 'Zeiten' },
+  { id: 'konjunktiv_ii', title: 'Konjunktiv II', description: 'Wünsche und Träume ausdrücken', category: 'Modus' },
+  { id: 'passiv', title: 'Passiv', description: 'Vorgangspassiv in verschiedenen Zeiten', category: 'Verben' },
+  { id: 'nebensaetze', title: 'Nebensätze', description: 'Weil, dass, wenn, obwohl...', category: 'Satzbau' },
+  { id: 'reflexivverben', title: 'Reflexive Verben', description: 'Sich freuen, sich ärgern...', category: 'Verben' },
+  { id: 'praepositionen', title: 'Präpositionen', description: 'Wechselpräpositionen & Dativ/Akkusativ', category: 'Grammatik' }
 ];
 
 const strokeWidth = 1.2;
@@ -230,6 +282,16 @@ export const Icons = {
   Library: (props: any) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={strokeWidth} stroke="currentColor" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+    </svg>
+  ),
+  Puzzle: (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={strokeWidth} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 0 1-.657.643 48.39 48.39 0 0 1-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 0 1-.658.663v0c-.355 0-.676-.186-.959-.401a2.873 2.873 0 0 0-1.003-.349C3.84 10.25 3 11.257 3 12.5s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 0 1-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 0 0 .663-.664v0c0-.355-.186-.676-.401-.959a2.873 2.873 0 0 0-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604.4.959v0c.002.337.277.573.584.532 5.056-.642 5.056-.642 5.056-.642a.636.636 0 0 0 .57-.532v0c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.035-1.008-1.875-2.25-1.875-1.243 0-2.25.84-2.25 1.875 0 .369.128.713.349 1.003.215.283.4.604.4.959v0c.002.337.277.573.584.532z" />
+    </svg>
+  ),
+  GameController: (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={strokeWidth} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
     </svg>
   )
 };
